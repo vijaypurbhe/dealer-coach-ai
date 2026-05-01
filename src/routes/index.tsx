@@ -6,7 +6,7 @@ import { HealthBadge } from "@/components/app/HealthBadge";
 import { Sparkline } from "@/components/app/Sparkline";
 import { DEALERS } from "@/data/dealers";
 import { computeHealth, formatKpi, latest } from "@/data/health";
-import { KPI_META, type KpiKey } from "@/data/types";
+import { KPI_META } from "@/data/types";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -152,7 +152,6 @@ function PortfolioPage() {
               {filtered.map(({ dealer, health }) => {
                 const last = latest(dealer);
                 const csiSeries = dealer.history.map((p) => p.csi);
-                const ret1Series = dealer.history.map((p) => p.retention1y);
                 return (
                   <tr key={dealer.id} className="group transition-colors hover:bg-muted/30">
                     <td className="px-4 py-3">
@@ -210,8 +209,6 @@ function PortfolioPage() {
             </tbody>
           </table>
         </div>
-        {/* prevent unused-import error if ret1Series eliminated above */}
-        <span className="hidden">{KPI_META.retention1y.label}</span>
       </main>
     </div>
   );
