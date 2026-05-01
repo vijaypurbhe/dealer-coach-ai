@@ -143,15 +143,15 @@ function PortfolioPage() {
                 <SortHeader label="Dealer" k="name" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
                 <SortHeader label="Health" k="score" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
                 <th className="px-4 py-3 font-medium">90-day trend</th>
-                <th className="px-4 py-3 font-medium">AI insight</th>
                 <SortHeader label="CSI" k="csi" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
                 <SortHeader label="1-yr Ret." k="retention1y" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
+                <th className="px-4 py-3 font-medium">Top issue</th>
                 <SortHeader label="Last visit" k="lastVisit" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
                 <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filtered.map(({ dealer, health, insight }, i) => {
+              {filtered.map(({ dealer, health }, i) => {
                 const last = latest(dealer);
                 const csiSeries = dealer.history.map((p) => p.csi);
                 return (
@@ -177,13 +177,21 @@ function PortfolioPage() {
                         <TrendChip trend={health.trend} compact />
                       </div>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="max-w-[280px]">
-                        <InsightChip insight={insight} />
-                      </div>
-                    </td>
                     <td className="px-4 py-3 text-right tabular-nums">{last.csi.toFixed(1)}%</td>
                     <td className="px-4 py-3 text-right tabular-nums">{last.retention1y.toFixed(1)}%</td>
+                    <td className="px-4 py-3">
+                      {health.topIssue ? (
+                        <div className="flex items-center gap-1.5">
+                          <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-warning" />
+                          <span className="text-xs">
+                            <span className="font-medium text-foreground">{KPI_META[health.topIssue.kpi].label.split(" ")[0]}</span>{" "}
+                            <span className="text-muted-foreground">{formatKpi(health.topIssue.kpi, latest(dealer)[health.topIssue.kpi])}</span>
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">No flags</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums">{dealer.lastVisit}</td>
                     <td className="px-4 py-3 text-right">
                       <Link
