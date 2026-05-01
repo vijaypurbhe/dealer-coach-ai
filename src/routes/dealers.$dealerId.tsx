@@ -113,7 +113,7 @@ function DealerPage() {
             <TabsTrigger value="context" className="data-[state=active]:bg-muted">Context</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="mt-0 space-y-6">
+          <TabsContent value="overview" className="mt-0 space-y-6 tab-transition">
             <div className="grid gap-6 lg:grid-cols-3">
               <section className="lg:col-span-2">
                 <SectionTitle>Top focus areas</SectionTitle>
@@ -145,7 +145,7 @@ function DealerPage() {
             </section>
           </TabsContent>
 
-          <TabsContent value="kpis" className="mt-0">
+          <TabsContent value="kpis" className="mt-0 tab-transition">
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {KPI_GRID.map((k) => (
                 <KpiTrendCard key={k} dealer={dealer} peers={peers} kpi={k} />
@@ -153,15 +153,15 @@ function DealerPage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="coach" className="mt-0">
+          <TabsContent value="coach" className="mt-0 tab-transition">
             <CoachInsightsPanel dealerId={dealer.id} />
           </TabsContent>
 
-          <TabsContent value="actions" className="mt-0">
+          <TabsContent value="actions" className="mt-0 tab-transition">
             <ActionsList actions={dealer.actions} />
           </TabsContent>
 
-          <TabsContent value="context" className="mt-0">
+          <TabsContent value="context" className="mt-0 tab-transition">
             <div className="grid gap-4 md:grid-cols-2">
               <ContextCard title="Online presence" icon={<Globe className="h-3.5 w-3.5" />}>
                 <div className="flex items-center gap-2">
