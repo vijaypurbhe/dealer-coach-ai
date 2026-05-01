@@ -1,12 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowUpDown, ArrowUpRight, TrendingDown, TrendingUp, Minus, AlertTriangle, Search, MapPin } from "lucide-react";
+import { ArrowUpDown, ArrowUpRight, TrendingDown, TrendingUp, Minus, Search, MapPin } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AppHeader } from "@/components/app/AppHeader";
 import { HealthBadge } from "@/components/app/HealthBadge";
 import { Sparkline } from "@/components/app/Sparkline";
 import { InsightChip } from "@/components/app/InsightChip";
 import { DEALERS } from "@/data/dealers";
-import { computeHealth, formatKpi, latest } from "@/data/health";
+import { computeHealth, latest } from "@/data/health";
 import { getDealerInsight } from "@/data/insights";
 import { KPI_META } from "@/data/types";
 import { Input } from "@/components/ui/input";
