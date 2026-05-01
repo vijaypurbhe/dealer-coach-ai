@@ -1,22 +1,82 @@
-import { useRef, useState, useEffect } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { Send, Sparkles, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getDealer } from "@/data/dealers";
+import { computeHealth, formatKpi, gapToTarget, latest } from "@/data/health";
+import { KPI_META, type KpiKey } from "@/data/types";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
-const STARTER_PROMPTS = [
-  "Why is 1-year retention slipping?",
-  "Draft talking points for my next visit.",
-  "What worked at similar dealers?",
-  "Summarize the biggest risks here.",
-];
+function buildContextualPrompts(dealerId: string): string[] {
+  const dealer = getDealer(dealerId);
+  if (!dealer) {
+    return [
+      "Summarize the biggest risks here.",
+      "Draft talking points for my next visit.",
+      "What worked at similar dealers?",
+    ];
+  }
+  const health = computeHealth(dealer);
+  const last = latest(dealer);
+  const prev = dealer.history[dealer.history.length - 2];
+
+  // Rank KPIs by gap-to-target severity
+  const kpis = Object.keys(KPI_META) as KpiKey[];
+  const ranked = kpis
+    .map((k) => ({ k, gap: gapToTarget(dealer, k) }))
+    .filter((x) => x.gap > 0)
+    .sort((a, b) => b.gap - a.gap);
+
+  const topKpi = ranked[0]?.k ?? health.topIssue?.kpi;
+  const secondKpi = ranked[1]?.k;
+
+  // Find a KPI that moved most MoM (negative direction)
+  const droppingKpi = prev
+    ? kpis
+        .map((k) => {
+          const dir = KPI_META[k].goodDirection === "up" ? 1 : -1;
+          return { k, delta: (last[k] - prev[k]) * dir };
+        })
+        .sort((a, b) => a.delta - b.delta)[0]
+    : null;
+
+  // Recent successful action category
+  const win = dealer.actions.find((a) => a.outcome === "worked");
+  // Online review themes
+  const theme = dealer.context.online.recentThemes[0];
+
+  const prompts: string[] = [];
+
+  if (topKpi) {
+    prompts.push(
+      `Why is ${KPI_META[topKpi].label} at ${formatKpi(topKpi, last[topKpi])} vs target ${formatKpi(topKpi, KPI_META[topKpi].target)}?`,
+    );
+  }
+  if (droppingKpi && droppingKpi.delta < 0 && droppingKpi.k !== topKpi) {
+    prompts.push(`What's driving the recent drop in ${KPI_META[droppingKpi.k].label}?`);
+  }
+  if (secondKpi && secondKpi !== droppingKpi?.k) {
+    prompts.push(`How do peers in ${dealer.region} compare on ${KPI_META[secondKpi].label}?`);
+  }
+  if (theme) {
+    prompts.push(`Customers mention "${theme.toLowerCase()}" — how should I address that with the GM?`);
+  }
+  if (win) {
+    prompts.push(`Could the "${win.title}" playbook work again here?`);
+  }
+  prompts.push(`Draft talking points for my next visit to ${dealer.name.split(" ").slice(0, 2).join(" ")}.`);
+
+  // Dedupe and cap
+  return Array.from(new Set(prompts)).slice(0, 5);
+}
 
 export function CoachChat({ dealerId, dealerName }: { dealerId: string; dealerName: string }) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const starterPrompts = useMemo(() => buildContextualPrompts(dealerId), [dealerId]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -105,7 +165,7 @@ export function CoachChat({ dealerId, dealerName }: { dealerId: string; dealerNa
               I have this dealer's last 12 months of KPIs, action history, peer benchmarks, and context signals.
             </div>
             <div className="flex flex-wrap gap-2">
-              {STARTER_PROMPTS.map((p) => (
+              {starterPrompts.map((p) => (
                 <button
                   key={p}
                   onClick={() => send(p)}
