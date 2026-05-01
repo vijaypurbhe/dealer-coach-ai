@@ -130,11 +130,53 @@ function PortfolioPage() {
           </p>
         </div>
 
-        <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-          <SummaryCard label="Avg 1-yr retention" value={`${summary.ret1.toFixed(1)}%`} hint={`Target ${KPI_META.retention1y.target}%`} />
-          <SummaryCard label="Avg CSI" value={`${summary.csi.toFixed(1)}%`} hint={`Target ${KPI_META.csi.target}%`} />
-          <SummaryCard label="Need attention" value={`${summary.attention}`} hint="Dealers below threshold" tone="danger" />
-          <SummaryCard label="Trending up" value={`${summary.improving}`} hint="Last 90 days" tone="success" />
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <SummaryCard
+            label="Avg 1-yr retention"
+            value={`${summary.ret1.toFixed(1)}%`}
+            delta={summary.retDelta}
+            unit="pt"
+            hint={`Target ${KPI_META.retention1y.target}%`}
+            insight={
+              summary.ret1 < KPI_META.retention1y.target
+                ? `Portfolio is ${(KPI_META.retention1y.target - summary.ret1).toFixed(1)}pt below target. Lapsed-owner reactivation could lift 2–3pt in 60 days.`
+                : `At/above target — replicate top performer's service-touch cadence across watch dealers.`
+            }
+          />
+          <SummaryCard
+            label="Avg CSI"
+            value={`${summary.csi.toFixed(1)}%`}
+            delta={summary.csiDelta}
+            unit="pt"
+            hint={`Target ${KPI_META.csi.target}%`}
+            insight={
+              summary.csiDelta < -0.3
+                ? `CSI dipped ${Math.abs(summary.csiDelta).toFixed(1)}pt MoM — wait-time themes recurring across ${summary.toneCounts.risk ?? 0} at-risk dealers.`
+                : `CSI holding. Advisor coaching at watch-list dealers projects +1.5pt next cycle.`
+            }
+          />
+          <SummaryCard
+            label="Need attention"
+            value={`${summary.attention}`}
+            hint="Dealers below threshold"
+            tone="danger"
+            insight={
+              summary.worst
+                ? `${summary.worst.dealer.name.split(" of ")[0]} is most at risk (score ${summary.worst.health.score}).${summary.topRiskKpi ? ` ${summary.topRiskKpi.count} dealers share ${KPI_META[summary.topRiskKpi.kpi as keyof typeof KPI_META].label.toLowerCase()} as top issue.` : ""}`
+                : `No dealers below threshold — focus this week on watch-list to prevent slippage.`
+            }
+          />
+          <SummaryCard
+            label="Trending up"
+            value={`${summary.improving}`}
+            hint="Last 90 days"
+            tone="success"
+            insight={
+              summary.improvingNames.length
+                ? `${summary.improvingNames.join(" & ")} leading recovery — capture playbook before next district call.`
+                : `No clear momentum yet. Pilot a retention sprint at 2 watch-list dealers this month.`
+            }
+          />
         </div>
 
         <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
