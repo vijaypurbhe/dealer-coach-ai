@@ -9,10 +9,16 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as DataRouteImport } from './routes/data'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DealersDealerIdRouteImport } from './routes/dealers.$dealerId'
 import { Route as ApiCoachChatRouteImport } from './routes/api/coach-chat'
 
+const DataRoute = DataRouteImport.update({
+  id: '/data',
+  path: '/data',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -31,36 +37,47 @@ const ApiCoachChatRoute = ApiCoachChatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/data': typeof DataRoute
   '/api/coach-chat': typeof ApiCoachChatRoute
   '/dealers/$dealerId': typeof DealersDealerIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/data': typeof DataRoute
   '/api/coach-chat': typeof ApiCoachChatRoute
   '/dealers/$dealerId': typeof DealersDealerIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/data': typeof DataRoute
   '/api/coach-chat': typeof ApiCoachChatRoute
   '/dealers/$dealerId': typeof DealersDealerIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/coach-chat' | '/dealers/$dealerId'
+  fullPaths: '/' | '/data' | '/api/coach-chat' | '/dealers/$dealerId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/coach-chat' | '/dealers/$dealerId'
-  id: '__root__' | '/' | '/api/coach-chat' | '/dealers/$dealerId'
+  to: '/' | '/data' | '/api/coach-chat' | '/dealers/$dealerId'
+  id: '__root__' | '/' | '/data' | '/api/coach-chat' | '/dealers/$dealerId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DataRoute: typeof DataRoute
   ApiCoachChatRoute: typeof ApiCoachChatRoute
   DealersDealerIdRoute: typeof DealersDealerIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/data': {
+      id: '/data'
+      path: '/data'
+      fullPath: '/data'
+      preLoaderRoute: typeof DataRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -87,6 +104,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DataRoute: DataRoute,
   ApiCoachChatRoute: ApiCoachChatRoute,
   DealersDealerIdRoute: DealersDealerIdRoute,
 }
