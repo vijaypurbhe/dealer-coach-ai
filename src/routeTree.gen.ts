@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DealersDealerIdRouteImport } from './routes/dealers.$dealerId'
 import { Route as ApiCoachChatRouteImport } from './routes/api/coach-chat'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DealersDealerIdRoute = DealersDealerIdRouteImport.update({
+  id: '/dealers/$dealerId',
+  path: '/dealers/$dealerId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCoachChatRoute = ApiCoachChatRouteImport.update({
@@ -26,27 +32,31 @@ const ApiCoachChatRoute = ApiCoachChatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/coach-chat': typeof ApiCoachChatRoute
+  '/dealers/$dealerId': typeof DealersDealerIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/coach-chat': typeof ApiCoachChatRoute
+  '/dealers/$dealerId': typeof DealersDealerIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/coach-chat': typeof ApiCoachChatRoute
+  '/dealers/$dealerId': typeof DealersDealerIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/coach-chat'
+  fullPaths: '/' | '/api/coach-chat' | '/dealers/$dealerId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/coach-chat'
-  id: '__root__' | '/' | '/api/coach-chat'
+  to: '/' | '/api/coach-chat' | '/dealers/$dealerId'
+  id: '__root__' | '/' | '/api/coach-chat' | '/dealers/$dealerId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiCoachChatRoute: typeof ApiCoachChatRoute
+  DealersDealerIdRoute: typeof DealersDealerIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -56,6 +66,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dealers/$dealerId': {
+      id: '/dealers/$dealerId'
+      path: '/dealers/$dealerId'
+      fullPath: '/dealers/$dealerId'
+      preLoaderRoute: typeof DealersDealerIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/coach-chat': {
@@ -71,7 +88,17 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiCoachChatRoute: ApiCoachChatRoute,
+  DealersDealerIdRoute: DealersDealerIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
