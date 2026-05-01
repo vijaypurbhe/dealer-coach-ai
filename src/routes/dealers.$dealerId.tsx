@@ -7,8 +7,10 @@ import { KpiTrendCard } from "@/components/app/KpiTrendCard";
 import { Sparkline } from "@/components/app/Sparkline";
 import { CoachInsightsPanel } from "@/components/app/CoachInsights";
 import { CoachChat } from "@/components/app/CoachChat";
+import { InsightChip } from "@/components/app/InsightChip";
 import { DEALERS, getDealer } from "@/data/dealers";
 import { computeHealth, formatKpi, gapToTarget, latest } from "@/data/health";
+import { getDealerInsight } from "@/data/insights";
 import { KPI_META, type KpiKey } from "@/data/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -52,6 +54,7 @@ function DealerPage() {
   const { dealer } = Route.useLoaderData();
   const peers = DEALERS.filter((d) => dealer.peerIds.includes(d.id));
   const health = computeHealth(dealer);
+  const insight = getDealerInsight(dealer);
   const [chatOpen, setChatOpen] = useState(false);
   const last = latest(dealer);
   const prev = dealer.history[dealer.history.length - 2];
@@ -99,6 +102,9 @@ function DealerPage() {
             {KPI_STRIP.map((k) => (
               <KpiStripItem key={k} kpi={k} value={last[k]} prev={prev[k]} dealer={dealer} />
             ))}
+          </div>
+          <div className="pb-3">
+            <InsightChip insight={insight} />
           </div>
         </div>
       </div>
