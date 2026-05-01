@@ -1,12 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowUpDown, ArrowUpRight, TrendingDown, TrendingUp, Minus, Search, MapPin } from "lucide-react";
+import { ArrowUpDown, ArrowUpRight, TrendingDown, TrendingUp, Minus, AlertTriangle, Sparkles, Search, MapPin } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AppHeader } from "@/components/app/AppHeader";
 import { HealthBadge } from "@/components/app/HealthBadge";
 import { Sparkline } from "@/components/app/Sparkline";
-import { InsightChip } from "@/components/app/InsightChip";
 import { DEALERS } from "@/data/dealers";
-import { computeHealth, latest } from "@/data/health";
+import { computeHealth, formatKpi, latest } from "@/data/health";
 import { getDealerInsight } from "@/data/insights";
 import { KPI_META } from "@/data/types";
 import { Input } from "@/components/ui/input";
@@ -80,7 +79,43 @@ function PortfolioPage() {
       enriched.reduce((s, { dealer }) => s + latest(dealer).retention1y, 0) / enriched.length;
     const attention = enriched.filter((e) => e.health.status === "attention").length;
     const improving = enriched.filter((e) => e.health.trend === "up").length;
-    return { csi, ret1, attention, improving };
+
+    // Prior-month aggregates for trend deltas
+    const prevCsi =
+      enriched.reduce((s, { dealer }) => {
+        const h = dealer.history; return s + h[h.length - 2].csi;
+      }, 0) / enriched.length;
+    const prevRet =
+      enriched.reduce((s, { dealer }) => {
+        const h = dealer.history; return s + h[h.length - 2].retention1y;
+      }, 0) / enriched.length;
+
+    // Worst attention dealer & dominant tone among insights
+    const attentionDealers = enriched.filter((e) => e.health.status === "attention");
+    const worst = [...attentionDealers].sort((a, b) => a.health.score - b.health.score)[0];
+    const toneCounts = enriched.reduce<Record<string, number>>((acc, e) => {
+      acc[e.insight.tone] = (acc[e.insight.tone] ?? 0) + 1; return acc;
+    }, {});
+    const topRiskKpi = (() => {
+      const counts: Record<string, number> = {};
+      enriched.forEach((e) => {
+        if (e.health.topIssue) counts[e.health.topIssue.kpi] = (counts[e.health.topIssue.kpi] ?? 0) + 1;
+      });
+      const entry = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+      return entry ? { kpi: entry[0], count: entry[1] } : null;
+    })();
+    const improvingNames = enriched
+      .filter((e) => e.health.trend === "up")
+      .sort((a, b) => b.health.score - a.health.score)
+      .slice(0, 2)
+      .map((e) => e.dealer.name.replace("Mitsubishi", "").replace("of", "").trim());
+
+    return {
+      csi, ret1, attention, improving,
+      csiDelta: csi - prevCsi,
+      retDelta: ret1 - prevRet,
+      worst, toneCounts, topRiskKpi, improvingNames,
+    };
   }, [enriched]);
 
   return (
@@ -95,11 +130,53 @@ function PortfolioPage() {
           </p>
         </div>
 
-        <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-          <SummaryCard label="Avg 1-yr retention" value={`${summary.ret1.toFixed(1)}%`} hint={`Target ${KPI_META.retention1y.target}%`} />
-          <SummaryCard label="Avg CSI" value={`${summary.csi.toFixed(1)}%`} hint={`Target ${KPI_META.csi.target}%`} />
-          <SummaryCard label="Need attention" value={`${summary.attention}`} hint="Dealers below threshold" tone="danger" />
-          <SummaryCard label="Trending up" value={`${summary.improving}`} hint="Last 90 days" tone="success" />
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <SummaryCard
+            label="Avg 1-yr retention"
+            value={`${summary.ret1.toFixed(1)}%`}
+            delta={summary.retDelta}
+            unit="pt"
+            hint={`Target ${KPI_META.retention1y.target}%`}
+            insight={
+              summary.ret1 < KPI_META.retention1y.target
+                ? `Portfolio is ${(KPI_META.retention1y.target - summary.ret1).toFixed(1)}pt below target. Lapsed-owner reactivation could lift 2–3pt in 60 days.`
+                : `At/above target — replicate top performer's service-touch cadence across watch dealers.`
+            }
+          />
+          <SummaryCard
+            label="Avg CSI"
+            value={`${summary.csi.toFixed(1)}%`}
+            delta={summary.csiDelta}
+            unit="pt"
+            hint={`Target ${KPI_META.csi.target}%`}
+            insight={
+              summary.csiDelta < -0.3
+                ? `CSI dipped ${Math.abs(summary.csiDelta).toFixed(1)}pt MoM — wait-time themes recurring across ${summary.toneCounts.risk ?? 0} at-risk dealers.`
+                : `CSI holding. Advisor coaching at watch-list dealers projects +1.5pt next cycle.`
+            }
+          />
+          <SummaryCard
+            label="Need attention"
+            value={`${summary.attention}`}
+            hint="Dealers below threshold"
+            tone="danger"
+            insight={
+              summary.worst
+                ? `${summary.worst.dealer.name.split(" of ")[0]} is most at risk (score ${summary.worst.health.score}).${summary.topRiskKpi ? ` ${summary.topRiskKpi.count} dealers share ${KPI_META[summary.topRiskKpi.kpi as keyof typeof KPI_META].label.toLowerCase()} as top issue.` : ""}`
+                : `No dealers below threshold — focus this week on watch-list to prevent slippage.`
+            }
+          />
+          <SummaryCard
+            label="Trending up"
+            value={`${summary.improving}`}
+            hint="Last 90 days"
+            tone="success"
+            insight={
+              summary.improvingNames.length
+                ? `${summary.improvingNames.join(" & ")} leading recovery — capture playbook before next district call.`
+                : `No clear momentum yet. Pilot a retention sprint at 2 watch-list dealers this month.`
+            }
+          />
         </div>
 
         <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -143,15 +220,15 @@ function PortfolioPage() {
                 <SortHeader label="Dealer" k="name" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
                 <SortHeader label="Health" k="score" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
                 <th className="px-4 py-3 font-medium">90-day trend</th>
-                <th className="px-4 py-3 font-medium">AI insight</th>
                 <SortHeader label="CSI" k="csi" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
                 <SortHeader label="1-yr Ret." k="retention1y" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
+                <th className="px-4 py-3 font-medium">Top issue</th>
                 <SortHeader label="Last visit" k="lastVisit" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
                 <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filtered.map(({ dealer, health, insight }, i) => {
+              {filtered.map(({ dealer, health }, i) => {
                 const last = latest(dealer);
                 const csiSeries = dealer.history.map((p) => p.csi);
                 return (
@@ -177,13 +254,21 @@ function PortfolioPage() {
                         <TrendChip trend={health.trend} compact />
                       </div>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="max-w-[280px]">
-                        <InsightChip insight={insight} />
-                      </div>
-                    </td>
                     <td className="px-4 py-3 text-right tabular-nums">{last.csi.toFixed(1)}%</td>
                     <td className="px-4 py-3 text-right tabular-nums">{last.retention1y.toFixed(1)}%</td>
+                    <td className="px-4 py-3">
+                      {health.topIssue ? (
+                        <div className="flex items-center gap-1.5">
+                          <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-warning" />
+                          <span className="text-xs">
+                            <span className="font-medium text-foreground">{KPI_META[health.topIssue.kpi].label.split(" ")[0]}</span>{" "}
+                            <span className="text-muted-foreground">{formatKpi(health.topIssue.kpi, latest(dealer)[health.topIssue.kpi])}</span>
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">No flags</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums">{dealer.lastVisit}</td>
                     <td className="px-4 py-3 text-right">
                       <Link
@@ -217,15 +302,33 @@ function SummaryCard({
   value,
   hint,
   tone,
+  delta,
+  unit,
+  insight,
 }: {
   label: string;
   value: string;
   hint: string;
   tone?: "success" | "danger";
+  delta?: number;
+  unit?: string;
+  insight?: string;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-card)]">
-      <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</div>
+    <div className="group relative overflow-hidden rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-card)] transition-all hover:border-primary/40 hover:shadow-[var(--shadow-elegant)]">
+      <div className="absolute inset-x-0 top-0 h-px ai-shimmer opacity-60" />
+      <div className="flex items-start justify-between gap-2">
+        <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</div>
+        {delta !== undefined && (
+          <span className={cn(
+            "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium tabular-nums",
+            delta > 0.05 ? "bg-success/15 text-success" : delta < -0.05 ? "bg-danger/15 text-danger" : "bg-muted text-muted-foreground",
+          )}>
+            {delta > 0 ? <TrendingUp className="h-3 w-3" /> : delta < 0 ? <TrendingDown className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
+            {delta >= 0 ? "+" : ""}{delta.toFixed(1)}{unit ?? ""}
+          </span>
+        )}
+      </div>
       <div
         className={cn(
           "mt-2 text-2xl font-semibold tabular-nums",
@@ -235,7 +338,16 @@ function SummaryCard({
       >
         {value}
       </div>
-      <div className="mt-1 text-xs text-muted-foreground">{hint}</div>
+      <div className="mt-0.5 text-xs text-muted-foreground">{hint}</div>
+      {insight && (
+        <div className="mt-3 flex items-start gap-1.5 rounded-md bg-primary/5 px-2 py-1.5 ring-1 ring-primary/15">
+          <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
+          <div>
+            <div className="text-[9px] font-semibold uppercase tracking-wider text-primary">AI insight</div>
+            <p className="mt-0.5 text-[11px] leading-snug text-foreground">{insight}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
