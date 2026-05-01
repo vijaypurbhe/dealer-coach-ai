@@ -79,7 +79,43 @@ function PortfolioPage() {
       enriched.reduce((s, { dealer }) => s + latest(dealer).retention1y, 0) / enriched.length;
     const attention = enriched.filter((e) => e.health.status === "attention").length;
     const improving = enriched.filter((e) => e.health.trend === "up").length;
-    return { csi, ret1, attention, improving };
+
+    // Prior-month aggregates for trend deltas
+    const prevCsi =
+      enriched.reduce((s, { dealer }) => {
+        const h = dealer.history; return s + h[h.length - 2].csi;
+      }, 0) / enriched.length;
+    const prevRet =
+      enriched.reduce((s, { dealer }) => {
+        const h = dealer.history; return s + h[h.length - 2].retention1y;
+      }, 0) / enriched.length;
+
+    // Worst attention dealer & dominant tone among insights
+    const attentionDealers = enriched.filter((e) => e.health.status === "attention");
+    const worst = [...attentionDealers].sort((a, b) => a.health.score - b.health.score)[0];
+    const toneCounts = enriched.reduce<Record<string, number>>((acc, e) => {
+      acc[e.insight.tone] = (acc[e.insight.tone] ?? 0) + 1; return acc;
+    }, {});
+    const topRiskKpi = (() => {
+      const counts: Record<string, number> = {};
+      enriched.forEach((e) => {
+        if (e.health.topIssue) counts[e.health.topIssue.kpi] = (counts[e.health.topIssue.kpi] ?? 0) + 1;
+      });
+      const entry = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+      return entry ? { kpi: entry[0], count: entry[1] } : null;
+    })();
+    const improvingNames = enriched
+      .filter((e) => e.health.trend === "up")
+      .sort((a, b) => b.health.score - a.health.score)
+      .slice(0, 2)
+      .map((e) => e.dealer.name.replace("Mitsubishi", "").replace("of", "").trim());
+
+    return {
+      csi, ret1, attention, improving,
+      csiDelta: csi - prevCsi,
+      retDelta: ret1 - prevRet,
+      worst, toneCounts, topRiskKpi, improvingNames,
+    };
   }, [enriched]);
 
   return (
