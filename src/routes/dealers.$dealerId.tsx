@@ -7,8 +7,10 @@ import { KpiTrendCard } from "@/components/app/KpiTrendCard";
 import { Sparkline } from "@/components/app/Sparkline";
 import { CoachInsightsPanel } from "@/components/app/CoachInsights";
 import { CoachChat } from "@/components/app/CoachChat";
+import { InsightChip } from "@/components/app/InsightChip";
 import { DEALERS, getDealer } from "@/data/dealers";
 import { computeHealth, formatKpi, gapToTarget, latest } from "@/data/health";
+import { getDealerInsight } from "@/data/insights";
 import { KPI_META, type KpiKey } from "@/data/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -52,6 +54,7 @@ function DealerPage() {
   const { dealer } = Route.useLoaderData();
   const peers = DEALERS.filter((d) => dealer.peerIds.includes(d.id));
   const health = computeHealth(dealer);
+  const insight = getDealerInsight(dealer);
   const [chatOpen, setChatOpen] = useState(false);
   const last = latest(dealer);
   const prev = dealer.history[dealer.history.length - 2];
@@ -100,6 +103,9 @@ function DealerPage() {
               <KpiStripItem key={k} kpi={k} value={last[k]} prev={prev[k]} dealer={dealer} />
             ))}
           </div>
+          <div className="pb-3">
+            <InsightChip insight={insight} />
+          </div>
         </div>
       </div>
 
@@ -113,7 +119,7 @@ function DealerPage() {
             <TabsTrigger value="context" className="data-[state=active]:bg-muted">Context</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="mt-0 space-y-6">
+          <TabsContent value="overview" className="mt-0 space-y-6 tab-transition">
             <div className="grid gap-6 lg:grid-cols-3">
               <section className="lg:col-span-2">
                 <SectionTitle>Top focus areas</SectionTitle>
@@ -145,7 +151,7 @@ function DealerPage() {
             </section>
           </TabsContent>
 
-          <TabsContent value="kpis" className="mt-0">
+          <TabsContent value="kpis" className="mt-0 tab-transition">
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {KPI_GRID.map((k) => (
                 <KpiTrendCard key={k} dealer={dealer} peers={peers} kpi={k} />
@@ -153,15 +159,15 @@ function DealerPage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="coach" className="mt-0">
+          <TabsContent value="coach" className="mt-0 tab-transition">
             <CoachInsightsPanel dealerId={dealer.id} />
           </TabsContent>
 
-          <TabsContent value="actions" className="mt-0">
+          <TabsContent value="actions" className="mt-0 tab-transition">
             <ActionsList actions={dealer.actions} />
           </TabsContent>
 
-          <TabsContent value="context" className="mt-0">
+          <TabsContent value="context" className="mt-0 tab-transition">
             <div className="grid gap-4 md:grid-cols-2">
               <ContextCard title="Online presence" icon={<Globe className="h-3.5 w-3.5" />}>
                 <div className="flex items-center gap-2">
