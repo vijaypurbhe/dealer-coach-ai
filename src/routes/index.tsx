@@ -302,15 +302,33 @@ function SummaryCard({
   value,
   hint,
   tone,
+  delta,
+  unit,
+  insight,
 }: {
   label: string;
   value: string;
   hint: string;
   tone?: "success" | "danger";
+  delta?: number;
+  unit?: string;
+  insight?: string;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-card)]">
-      <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</div>
+    <div className="group relative overflow-hidden rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-card)] transition-all hover:border-primary/40 hover:shadow-[var(--shadow-elegant)]">
+      <div className="absolute inset-x-0 top-0 h-px ai-shimmer opacity-60" />
+      <div className="flex items-start justify-between gap-2">
+        <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</div>
+        {delta !== undefined && (
+          <span className={cn(
+            "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium tabular-nums",
+            delta > 0.05 ? "bg-success/15 text-success" : delta < -0.05 ? "bg-danger/15 text-danger" : "bg-muted text-muted-foreground",
+          )}>
+            {delta > 0 ? <TrendingUp className="h-3 w-3" /> : delta < 0 ? <TrendingDown className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
+            {delta >= 0 ? "+" : ""}{delta.toFixed(1)}{unit ?? ""}
+          </span>
+        )}
+      </div>
       <div
         className={cn(
           "mt-2 text-2xl font-semibold tabular-nums",
@@ -320,7 +338,16 @@ function SummaryCard({
       >
         {value}
       </div>
-      <div className="mt-1 text-xs text-muted-foreground">{hint}</div>
+      <div className="mt-0.5 text-xs text-muted-foreground">{hint}</div>
+      {insight && (
+        <div className="mt-3 flex items-start gap-1.5 rounded-md bg-primary/5 px-2 py-1.5 ring-1 ring-primary/15">
+          <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
+          <div>
+            <div className="text-[9px] font-semibold uppercase tracking-wider text-primary">AI insight</div>
+            <p className="mt-0.5 text-[11px] leading-snug text-foreground">{insight}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
